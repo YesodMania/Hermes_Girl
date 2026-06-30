@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HERMES-AGENT TERMINAL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root {
+  --y: #FFD700;
+  --yd: #7A6200;
+  --o: #FF8C00;
+  --od: #7A4000;
+  --bg: #000000;
+  --bg2: #050400;
+  --r: #FF2020;
+  --c: #00FFFF;
+  --g: #39FF14;
+  --pb: rgba(255,140,0,0.25);
+  --pbb: rgba(255,215,0,0.5);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; image-rendering:pixelated; }
+
+html, body {
+  background: var(--bg);
+  color: var(--y);
+  font-family: 'Press Start 2P', monospace;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+body {
+  font-size: clamp(7px, 0.85vw, 11px);
+}
+
+/* CRT scanlines */
+body::before {
+  content:'';
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);
+  pointer-events:none;z-index:9998;
+}
+
+/* vignette */
+body::after {
+  content:'';
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,0.85) 100%);
+  pointer-events:none;z-index:9997;
+}
+
+.terminal {
+  display:grid;
+  grid-template-columns: 29.3% 1fr;
+  grid-template-rows: 17vh 1fr auto;
+  height:100vh; width:100vw; gap:0; padding:0;
+  background:#0a0600;
+}
+
+.main-row{
+  grid-column:2;
+  display:grid;
+  grid-template-columns: 38% 1fr;
+  gap:0;
+  min-height:0;
+  overflow:hidden;
+}
+
+.center-col{
+  display:flex;flex-direction:column;gap:0;min-height:0;
+}
+
+/* HEADER */
+.header {
+  grid-column:1/-1;
+  border:2px solid var(--o);
+  padding:4px 8px;
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg2);
+  image-rendering:pixelated;
+}
+
+.htitle {
+  font-family:'Press Start 2P',monospace;
+  font-size:13px;
+  color:var(--y);
+  text-shadow:2px 2px 0 var(--o),4px 4px 0 var(--od);
+  letter-spacing:2px;line-height:1;
+  image-rendering:pixelated;
+}
+
+.hsub {font-size:5px;color:var(--od);letter-spacing:2px;margin-top:4px;font-family:'Press Start 2P',monospace;}
+
+.hcenter {
+  text-align:center;font-family:'Press Start 2P',monospace;
+  font-size:6px;color:var(--od);letter-spacing:1px;line-height:2;
+}
+.pulse{color:var(--o);animation:pt 1.5s steps(1) infinite;}
+@keyframes pt{0%,100%{opacity:1}50%{opacity:0}}
+
+.hbios{text-align:right;font-family:'Press Start 2P',monospace;font-size:5px;line-height:2;color:var(--yd);}
+.hbios span{color:var(--y);}
+.hbios .oo{color:var(--o);}
+
+/* PANELS */
+.pl,.pr {border:2px solid var(--pb);overflow:hidden;background:var(--bg2);height:100%;min-height:0;display:flex;flex-direction:column;}
+.pl{padding:0;}
+.plabel {
+  font-family:'Press Start 2P',monospace;font-size:5px;letter-spacing:2px;
+  color:var(--od);text-align:center;padding:3px 4px;
+  border-bottom:2px solid var(--pb);background:rgba(255,140,0,0.05);
+}
+
+.dstream{overflow:hidden;padding:2px 3px;flex:1;min-height:0;}
+.sl{font-family:'Press Start 2P',monospace;font-size:5px;line-height:1.6;white-space:nowrap;overflow:hidden;color:var(--yd);}
+.sl.b{color:var(--y);} .sl.w{color:var(--o);} .sl.e{color:var(--r);} .sl.i{color:var(--c);} .sl.a{color:var(--o);}
+
+/* CENTER */
+.center {
+  display:flex;flex-direction:column;
+  border:2px solid var(--pbb);
+  background:var(--bg2);overflow:hidden;
+  min-height:0;
+}
+
+.heart-section{
+  flex:0 0 67.6%;
+  min-height:0;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  border-bottom:2px solid var(--pb);
+}
+
+.heart-box{width:100%;height:100%;overflow:hidden;position:relative;}
+.heart-box img{width:100%;height:100%;object-fit:cover;}
+
+.bpanel {
+  flex:1;min-height:0;
+  padding:1vh 1vw;
+  background:rgba(255,140,0,0.02);
+  display:grid;grid-template-columns:1fr 1fr;gap:0.3vh 12px;
+  align-content:center;
+}
+.br{display:flex;justify-content:space-between;font-family:'Press Start 2P',monospace;font-size:5px;line-height:2.2;border-bottom:1px solid rgba(255,140,0,0.08);}
+.bk{color:var(--od);}
+.bv{color:var(--y);text-align:right;}
+.bv.g{color:var(--g);} .bv.oo{color:var(--o);} .bv.c{color:var(--c);}
+
+/* CHAT now lives in .pl directly */
+.pl{display:flex;flex-direction:column;}
+.chat-hdr{
+  padding:3px 8px;font-family:'Press Start 2P',monospace;font-size:5px;
+  letter-spacing:2px;color:var(--od);border-bottom:2px solid var(--pb);
+  background:rgba(255,140,0,0.03);display:flex;justify-content:space-between;
+}
+.chat-log{flex:1;overflow-y:auto;padding:6px 8px;scroll-behavior:smooth;}
+.chat-log::-webkit-scrollbar{width:3px;}
+.chat-log::-webkit-scrollbar-thumb{background:var(--od);}
+
+.msg{margin-bottom:8px;line-height:1.6;}
+.mh{font-family:'Press Start 2P',monospace;font-size:5px;letter-spacing:1px;margin-bottom:2px;}
+.mb{font-family:'Press Start 2P',monospace;font-size:5px;padding-left:4px;border-left:2px solid transparent;line-height:1.8;}
+
+.msg.user .mh{color:var(--c);}
+.msg.user .mb{color:#e0f8ff;border-left-color:var(--c);}
+.msg.hermes .mh{color:var(--y);}
+.msg.hermes .mb{color:var(--y);border-left-color:var(--o);}
+.msg.system .mh{color:var(--od);}
+.msg.system .mb{color:var(--o);}
+
+.typing{display:none;padding:3px 8px 5px;font-family:'Press Start 2P',monospace;font-size:5px;color:var(--od);}
+.td{display:inline-block;width:4px;height:4px;background:var(--o);margin:0 2px;animation:tdot 0.8s steps(1) infinite;}
+.td:nth-child(2){animation-delay:0.27s}.td:nth-child(3){animation-delay:0.54s}
+@keyframes tdot{0%,100%{opacity:0}50%{opacity:1}}
+/* heartpulse removido - substituído por static overlay + ECG abaixo */
+
+.ibar{border-top:2px solid var(--pb);padding:5px 8px;display:flex;align-items:center;gap:6px;background:rgba(255,140,0,0.03);}
+.ps{color:var(--o);font-family:'Press Start 2P',monospace;font-size:8px;flex-shrink:0;}
+.ci{flex:1;background:transparent;border:none;outline:none;color:var(--y);font-family:'Press Start 2P',monospace;font-size:6px;caret-color:var(--o);}
+.ci::placeholder{color:var(--od);opacity:0.7;}
+.sb{background:var(--bg);border:2px solid var(--o);color:var(--o);font-family:'Press Start 2P',monospace;font-size:5px;padding:4px 6px;cursor:pointer;letter-spacing:1px;image-rendering:pixelated;}
+.sb:hover{background:var(--o);color:#000;}
+
+/* RIGHT — GIRL */
+.pr{display:flex;flex-direction:column;height:100%;min-height:0;}
+.girl-panel{flex:1;overflow:hidden;background:#000;position:relative;min-height:0;display:flex;flex-direction:column;}
+
+.girl-square{
+  width:100%;
+  height:52vh;
+  flex-shrink:0;
+  position:relative;
+  overflow:hidden;
+  border-bottom:2px solid var(--pb);
+}
+
+.girl-free-space{
+  flex:1;
+  min-height:0;
+  position:relative;
+  overflow:hidden;
+  padding:1.5vh 1.2vw;
+  display:flex;flex-direction:column;
+}
+
+.acard{font-family:'Press Start 2P',monospace;font-size:clamp(5px,0.7vw,8px);line-height:2.3;}
+.act{font-size:clamp(5px,0.75vw,9px);letter-spacing:2px;color:var(--o);margin-bottom:0.8vh;border-bottom:2px solid var(--pb);padding-bottom:0.5vh;text-shadow:0 0 6px var(--og);}
+.ar{display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,140,0,0.08);}
+.ak{color:var(--od);}.av{color:var(--y);}.av.g{color:var(--g);}.av.oo{color:var(--o);}
+
+#ecg-canvas{margin-top:auto;display:block;image-rendering:pixelated;width:100%;max-width:100%;height:36px;opacity:0.85;}
+
+/* FOOTER */
+.footer{
+  grid-column:1/-1;
+  border-top:2px solid var(--pb);padding:3px 10px;
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg2);font-family:'Press Start 2P',monospace;font-size:5px;color:var(--yd);letter-spacing:1px;
+}
+.sdot{display:inline-block;width:6px;height:6px;background:var(--g);margin-right:4px;animation:sdp 1s steps(1) infinite;}
+@keyframes sdp{0%,100%{opacity:1}50%{opacity:0}}
+.sdot.am{background:var(--o);}
+
+/* ══ BOOT SEQUENCE ══ */
+#rain-canvas{
+  position:fixed;top:0;left:0;width:100vw;height:100vh;
+  z-index:0;pointer-events:none;opacity:0.9;transition:opacity 1.2s ease;
+}
+#boot-screen{
+  position:fixed;top:0;left:0;width:100vw;height:100vh;
+  background:#000;z-index:2;
+  display:flex;align-items:flex-start;justify-content:flex-start;
+  padding:4vh 4vw;
+  font-family:'VT323',monospace;
+  transition:background 0.6s ease, opacity 0.6s ease;
+}
+#boot-text{
+  color:var(--y);font-size:clamp(11px,1.6vw,18px);line-height:1.5;
+  white-space:pre-wrap;text-shadow:0 0 4px var(--o);
+}
+#boot-text .ok{color:var(--g);}
+#boot-text .warn{color:var(--o);}
+
+.terminal{transition:opacity 0.8s ease;position:relative;z-index:1;}
+
+/* entrada peça-a-peça do HUD */
+.hud-piece{opacity:0;transform:translateY(8px);transition:opacity 0.5s ease, transform 0.5s ease;}
+.hud-piece.show{opacity:1;transform:translateY(0);}
+
+.heart-box{transition:opacity 0.6s ease, filter 0.6s ease;}
+.heart-box.booting{opacity:0;}
+.heart-box.lit{filter:brightness(2.2) saturate(1.6);}
+
+#girl-img{transition:opacity 0.5s ease;}
+#heart-img{transition:filter 0.9s ease;}
+
+/* ══ PAINEL DE CENA (narrativa de eventos) ══ */
+.scene-card{transition:opacity 0.25s ease;}
+.scene-body{font-family:'Press Start 2P',monospace;font-size:clamp(5px,0.7vw,8px);line-height:2.1;}
+.scene-line{color:var(--y);opacity:0;animation:scLineIn 0.35s ease forwards;}
+.scene-line.log{color:var(--o);font-family:'VT323',monospace;font-size:clamp(8px,1vw,12px);}
+.scene-line.err{color:var(--r);}
+@keyframes scLineIn{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
+.scene-cursor{display:inline-block;color:var(--y);animation:sdp 0.9s steps(1) infinite;}
+.scene-progress-track{margin-top:1vh;width:100%;height:6px;border:1px solid var(--od);background:rgba(255,140,0,0.08);}
+.scene-progress-fill{height:100%;width:0%;background:var(--o);transition:width linear;box-shadow:0 0 6px var(--o);}
+.scene-card.alert{animation:scAlert 0.5s steps(2) infinite;}
+@keyframes scAlert{0%,100%{box-shadow:inset 0 0 0 1px transparent;}50%{box-shadow:inset 0 0 0 1px var(--r);}}
+
+/* ══════════════════════════════════════════════════
+   MODO VERTICAL — Instagram Reels / tela de celular (9:16)
+   Mesma estrutura HTML, só reorganiza via CSS: .main-row vira display:contents
+   pra "achatar" o wrapper, e tudo empilha verticalmente.
+   ══════════════════════════════════════════════════ */
+@media (max-aspect-ratio: 3/4){
+  body{font-size:clamp(10px,1.6vw,15px);}
+
+  .terminal{
+    display:flex;flex-direction:column;
+    height:100vh;width:100vw;
+  }
+  .main-row{display:contents;} /* achata o wrapper: .center e .pr viram filhos diretos do flex */
+
+  .header{order:0; flex:0 0 auto; padding:1.4vh 3vw; flex-direction:column;align-items:flex-start;gap:0.4vh;}
+  .htitle{font-size:19px;}
+  .hsub{font-size:8px;}
+  .hcenter{text-align:left;font-size:9px;line-height:1.6;}
+  .hcenter div:not(:first-child){display:none;} /* mantém só a linha "COGNITIVE LINK ACTIVE" */
+  .hbios{display:none;} /* CPU/MEM/PROVIDER/MODEL — decorativo, corta pra sobrar espaço pro conteúdo principal */
+
+  .pr{order:1; flex:0 0 38vh; min-height:0;}
+  .girl-square{height:24vh;}
+  .girl-free-space{padding:1vh 3vw;}
+  .acard, .scene-body{font-size:11px;line-height:1.7;}
+  .act, #scene-title{font-size:12px;margin-bottom:0.4vh;padding-bottom:0.3vh;}
+
+  .center{order:2; flex:0 0 32vh; min-height:0;}
+  .heart-section{flex:1;}
+  .bpanel{display:none;} /* grid de stats decorativo — corta no mobile pra não disputar espaço com o coração */
+  .heart-box{
+    width:92vw; height:100%; margin:0 auto;
+  }
+  .heart-box img{object-fit:cover !important;}
+  #ecg-canvas{height:24px;}
+
+  .pl{order:3; flex:1; min-height:0;}
+  .chat-hdr{font-size:10px;padding:1vh 3vw;}
+  .mh,.mb{font-size:11px;line-height:1.9;}
+  .ibar{padding:1.2vh 3vw;}
+  .ci{font-size:13px;}
+  .sb{font-size:10px;padding:6px 10px;}
+
+  .footer{order:4; flex:0 0 auto; padding:1vh 3vw; font-size:8px;}
+
+  #boot-text{font-size:clamp(13px,2.4vw,20px);}
+}
+</style>
+</head>
+<body>
+
+<canvas id="rain-canvas"></canvas>
+
+<div id="boot-screen">
+  <div id="boot-text"></div>
+</div>
+
+<div class="terminal" id="terminal-root" style="opacity:0;">
+
+<header class="header hud-piece" id="piece-header">
+  <div>
+    <div class="htitle">HERMES-AGENT</div>
+    <div class="hsub">NOUS RESEARCH // MESSENGER OF THE DIGITAL GODS</div>
+  </div>
+  <div class="hcenter">
+    <div class="pulse">&gt;&gt; COGNITIVE LINK ACTIVE &lt;&lt;</div>
+    <div>V0.17.0 // WSL2/UBUNTU 26.04</div>
+    <div>SESSION: <span style="color:var(--y)" id="h-ses">SES-????</span></div>
+  </div>
+  <div class="hbios">
+    <div><span id="h-dt">--/--/---- --:--:--</span></div>
+    <div>CPU <span id="h-cpu">--</span> MEM <span id="h-mem">--</span></div>
+    <div>PROVIDER: <span class="oo">NOUS PORTAL FREE</span></div>
+    <div>MODEL: <span>STEPFUN 3.7 FLASH</span></div>
+  </div>
+</header>
+
+<aside class="pl hud-piece" id="piece-chat">
+  <div class="chat-hdr">
+    <span>[ OPERATOR CHANNEL ]</span>
+    <span id="cc" style="color:var(--o)">CONNECTING...</span>
+  </div>
+  <div class="chat-log" id="clog">
+    <div class="msg system"><div class="mh">[SYS]</div><div class="mb">HERMES TERMINAL STARTED</div></div>
+    <div class="msg system"><div class="mh">[SYS]</div><div class="mb">TYPE MSG TO TALK TO AGENT</div></div>
+  </div>
+  <div class="typing" id="typ">
+    <span class="td"></span><span class="td"></span><span class="td"></span>
+    PROCESSING...
+  </div>
+  <div class="ibar">
+    <span class="ps">&gt;_</span>
+    <input class="ci" id="ci" type="text" placeholder="MESSAGE HERMES..." autocomplete="off"/>
+    <button class="sb" id="sb">SEND</button>
+  </div>
+</aside>
+
+<div class="main-row">
+
+<main class="center hud-piece" id="piece-center">
+  <div class="heart-section">
+    <div class="heart-box booting" id="heart-box">
+      <picture>
+        <source media="(max-aspect-ratio: 3/4)" srcset="images/hermes-heart-wide.png"/>
+        <img id="heart-img" src="images/hermes-heart.png" alt="Hermes Heart" style="width:100%;height:100%;object-fit:cover;filter:saturate(1.15);"/>
+      </picture>
+      <canvas id="heart-static-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;"></canvas>
+    </div>
+  </div>
+
+  <div class="bpanel">
+    <div class="br"><span class="bk">STATUS</span><span class="bv g" id="s-st">ONLINE</span></div>
+    <div class="br"><span class="bk">UPTIME</span><span class="bv" id="s-up">00:00:00</span></div>
+    <div class="br"><span class="bk">TOK IN</span><span class="bv c" id="s-ti">0</span></div>
+    <div class="br"><span class="bk">TOK OUT</span><span class="bv oo" id="s-to">0</span></div>
+    <div class="br"><span class="bk">MSGS</span><span class="bv" id="s-ms">0</span></div>
+    <div class="br"><span class="bk">PORT</span><span class="bv oo">:9119</span></div>
+    <div class="br"><span class="bk">GATEWAY</span><span class="bv g">WA+TG</span></div>
+    <div class="br"><span class="bk">COST</span><span class="bv g">$0.00</span></div>
+    <div class="br"><span class="bk">SKILLS</span><span class="bv">68 OK</span></div>
+    <div class="br"><span class="bk">TOOLS</span><span class="bv">32 OK</span></div>
+    <div class="br"><span class="bk">CRON</span><span class="bv g">ACTIVE</span></div>
+    <div class="br"><span class="bk">SRXNG</span><span class="bv">:8888</span></div>
+  </div>
+  <canvas id="ecg-heart-canvas" style="width:100%;height:5vh;display:block;"></canvas>
+</main>
+
+<aside class="pr hud-piece" id="piece-girl">
+  <div class="girl-panel">
+    <div class="girl-square">
+      <img id="girl-img" src="images/girl-closed.png" alt="Hermes Entity" style="width:100%;height:100%;object-fit:contain;display:block;filter:contrast(1.1) saturate(1.15);opacity:0;"/>
+      <canvas id="girl-fx-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
+    </div>
+    <div class="girl-free-space">
+      <div class="acard" id="agent-card">
+        <div class="act">[ AGENT PROFILE ]</div>
+        <div class="ar"><span class="ak">NAME</span><span class="av">HERMES</span></div>
+        <div class="ar"><span class="ak">ORG</span><span class="av">NOUS RESEARCH</span></div>
+        <div class="ar"><span class="ak">BUILD</span><span class="av">V0.17.0</span></div>
+        <div class="ar"><span class="ak">MEMORY</span><span class="av g">PERSISTENT</span></div>
+        <div class="ar"><span class="ak">SKILLS</span><span class="av">68 LOADED</span></div>
+        <div class="ar"><span class="ak">TOOLS</span><span class="av">32 ACTIVE</span></div>
+        <div class="ar"><span class="ak">OPERATOR</span><span class="av">AUGUSTO FURTADO</span></div>
+        <div class="ar"><span class="ak">HOST</span><span class="av">WSL2/UBUNTU 26.04</span></div>
+        <div class="ar"><span class="ak">ID</span><span class="av oo" id="aid-2">HERMES-????</span></div>
+      </div>
+      <div class="acard scene-card" id="scene-card" style="display:none;">
+        <div class="act" id="scene-title">[ SCENE ]</div>
+        <div class="scene-body" id="scene-body"></div>
+      </div>
+      <canvas id="ecg-canvas" width="300" height="40"></canvas>
+    </div>
+  </div>
+</aside>
+
+</div>
+
+<footer class="footer hud-piece" id="piece-footer">
+  <div><span class="sdot" id="sdot"></span><span id="sstat">CONNECTING...</span></div>
+  <div>HERMES AGENT TERMINAL // NOUS RESEARCH // AUGUSTO FURTADO</div>
+  <div id="ft">--:--:--</div>
+</footer>
+</div>
+
+<script>
+const API='http://localhost:9119';
+const IS_MOBILE = window.matchMedia('(max-aspect-ratio: 3/4)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const SID='SES-'+Math.random().toString(36).slice(2,6).toUpperCase();
+let tIn=0,tOut=0,msgs=0,online=false;
+const t0=Date.now();
+
+// ══════════════════════════════
+// HERMES STATE MACHINE — núcleo que sincroniza expressão + code rain +
+// bolhas do coração + ECG + glitch. Ver roteiro: 03-hermes-terminal-roteiro-animacao.md
+// ══════════════════════════════
+const HERMES_STATES = {
+  idle:      {expr:'hermes-girl', rain:0.20, rainSpd:0.4, bubRate:900,  bubSpd:1.0, ecgSpd:1.0, glitch:1.0},
+  listening: {expr:'girl-closed', rain:0.24, rainSpd:0.45,bubRate:900,  bubSpd:1.0, ecgSpd:1.0, glitch:1.0},
+  thinking:  {expr:'girl-thinking',rain:0.40,rainSpd:0.6, bubRate:650,  bubSpd:1.2, ecgSpd:1.25,glitch:1.0},
+  focus:     {expr:'girl-focus',  rain:0.85, rainSpd:1.5, bubRate:110,  bubSpd:2.3, ecgSpd:1.6, glitch:1.0},
+  success:   {expr:'girl-smile',  rain:0.30, rainSpd:0.5, bubRate:260,  bubSpd:1.3, ecgSpd:1.3, glitch:1.0},
+  agree:     {expr:'girl-yes',    rain:0.50, rainSpd:0.9, bubRate:140,  bubSpd:1.8, ecgSpd:1.5, glitch:1.0},
+  surprise:  {expr:'girl-gasp',   rain:0.60, rainSpd:1.6, bubRate:2200, bubSpd:0.3, ecgSpd:1.8, glitch:1.3, flash:true, heartSpike:true},
+  confusion: {expr:'girl-what',   rain:0.50, rainSpd:0.7, bubRate:600,  bubSpd:0.7, ecgSpd:0.9, glitch:3.0},
+  skeptical: {expr:'girl-really', rain:0.14, rainSpd:0.25,bubRate:900,  bubSpd:0.8, ecgSpd:0.8, glitch:1.0},
+  sad:       {expr:'girl-sad',    rain:0.10, rainSpd:0.18,bubRate:2200, bubSpd:0.5, ecgSpd:0.7, glitch:1.4},
+  error:     {expr:'girl-glitch', rain:0.85, rainSpd:0.05,bubRate:6000, bubSpd:0.05,ecgSpd:0.04,glitch:7.0, flatline:true, heart:'saturate(0.2) brightness(0.4)'},
+};
+
+let hState='idle';
+let hTarget=HERMES_STATES.idle;
+let hCur={...HERMES_STATES.idle};
+let bootDone=false;
+let flatlineUntil=0;
+const HEART_BASE='saturate(1.15)';
+
+// pico rápido nas "linhas cardíacas" do coração — só no susto, imita um sobressalto
+function doHeartSpike(){
+  const hb=document.getElementById('heart-box');
+  if(!hb) return;
+  hb.classList.add('lit');
+  setTimeout(()=>hb.classList.remove('lit'),190);
+}
+
+function applyHeartVisual(t){
+  const hi=document.getElementById('heart-img');
+  if(!hi) return;
+  hi.style.filter = t.heart || HEART_BASE; // só escurece quando o estado define (ex: error)
+  if(t.heartSpike) doHeartSpike();
+}
+
+function setHermesState(name){
+  if(!HERMES_STATES[name] || name===hState) { if(HERMES_STATES[name]){ setExpression(HERMES_STATES[name].expr); applyHeartVisual(HERMES_STATES[name]); } return; }
+  hState=name;
+  hTarget=HERMES_STATES[name];
+  setExpression(hTarget.expr);
+  applyHeartVisual(hTarget);
+  if(hTarget.flash) doSurpriseFlash();
+  if(hTarget.flatline) flatlineUntil=Date.now()+1400;
+}
+
+// expõe globalmente — útil pra testar estados manualmente no console:
+// setHermesState('thinking')
+window.setHermesState = setHermesState;
+
+function paramTick(){
+  for(const k of ['rain','rainSpd','bubRate','bubSpd','ecgSpd','glitch']){
+    hCur[k] += (hTarget[k]-hCur[k])*0.045;
+  }
+}
+setInterval(paramTick, 40);
+
+let transitionBurstUntil=0;
+function setExpression(name){
+  const img=document.getElementById('girl-img');
+  if(!img||!name) return;
+  if(img.dataset.cur===name) return;
+  img.dataset.cur=name;
+  transitionBurstUntil=Date.now()+560; // estática/glitch acompanha a troca inteira (fade-out + fade-in)
+  img.style.opacity=0;
+  setTimeout(()=>{ img.src='images/'+name+'.png'; img.style.opacity=1; }, 240);
+}
+
+function doSurpriseFlash(){
+  const fxEl=document.getElementById('girl-fx-canvas');
+  if(!fxEl) return;
+  fxEl.style.filter='brightness(2.6)';
+  setTimeout(()=>fxEl.style.filter='',180);
+}
+
+// ── code rain (canvas full-screen, intensidade/velocidade controladas por hCur) ──
+const RC=document.getElementById('rain-canvas');
+const rctx=RC.getContext('2d');
+let rainCols=[];
+const RGLYPHS='01アカサタナハマヤラワ$#&%*+-/\\<>'.split('');
+function resizeRain(){
+  RC.width=window.innerWidth; RC.height=window.innerHeight;
+  const cols=Math.floor(RC.width/16);
+  rainCols=new Array(cols).fill(0).map(()=>Math.random()*-40);
+}
+resizeRain();
+window.addEventListener('resize',resizeRain);
+function drawRain(){
+  const W=RC.width,H=RC.height;
+  rctx.fillStyle='rgba(0,0,0,0.18)';
+  rctx.fillRect(0,0,W,H);
+  rctx.font='14px monospace';
+  for(let i=0;i<rainCols.length;i++){
+    const x=i*16;
+    const y=rainCols[i]*16;
+    if(Math.random()<hCur.rain){
+      rctx.fillStyle=Math.random()<0.12?'#FFD700':'rgba(255,140,0,0.65)';
+      rctx.fillText(RGLYPHS[Math.floor(Math.random()*RGLYPHS.length)],x,y);
+    }
+    rainCols[i]+=hCur.rainSpd*0.6;
+    if(y>H && Math.random()>0.975) rainCols[i]=Math.random()*-20;
+  }
+}
+let rainInterval=setInterval(drawRain, IS_MOBILE?100:55);
+
+// ── Boot sequence: BIOS text -> rain pesado -> HUD montando -> coração liga -> menina acorda ──
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function bootSequence(){
+  const bt=document.getElementById('boot-text');
+  const lines=[
+    'HERMES-AGENT BIOS v0.17.0',
+    '(c) NOUS RESEARCH // WSL2-UBUNTU 26.04',
+    '',
+    'INITIALIZING CORE...',
+    '[OK] loading cognitive runtime',
+    '[OK] mounting persistent memory',
+    '[OK] loading 68 skills',
+    '[OK] loading 32 tools',
+    '[OK] gateway WA+TG handshake',
+    '[OK] cron jobs armed',
+    '',
+    'CONNECTING TO OPERATOR CHANNEL...',
+    'SESSION '+SID,
+    '',
+    'BOOT SEQUENCE COMPLETE.'
+  ];
+  for(const ln of lines){
+    const span=document.createElement('div');
+    let cls='';
+    if(ln.startsWith('[OK]')) cls='ok';
+    if(ln.startsWith('CONNECT')) cls='warn';
+    span.className=cls;
+    span.textContent=ln;
+    bt.appendChild(span);
+    await sleep(ln===''?60:55+Math.random()*70);
+  }
+  await sleep(350);
+
+  // rain pesado por um instante (boot-screen fica transparente, deixa o rain-canvas aparecer puro)
+  hCur.rain=0.9; hCur.rainSpd=2.2;
+  document.getElementById('boot-screen').style.background='transparent';
+  await sleep(1400);
+
+  // revela o terminal por baixo
+  document.getElementById('terminal-root').style.opacity='1';
+  await sleep(300);
+
+  // HUD se monta peça por peça
+  const pieces=['piece-header','piece-chat','piece-center','piece-girl','piece-footer'];
+  for(const id of pieces){
+    const el=document.getElementById(id);
+    if(el) el.classList.add('show');
+    await sleep(260);
+  }
+  await sleep(300);
+
+  // coração liga
+  const hb=document.getElementById('heart-box');
+  hb.classList.remove('booting');
+  await sleep(200);
+  hb.classList.add('lit');
+  await sleep(260);
+  hb.classList.remove('lit');
+
+  // menina abre os olhos
+  await sleep(500);
+  setExpression('hermes-girl');
+
+  // rain desacelera pro nível idle
+  await sleep(600);
+  document.getElementById('boot-screen').style.opacity='0';
+  setTimeout(()=>{ document.getElementById('boot-screen').style.display='none'; },650);
+  RC.style.opacity='0.05';
+  setHermesState('idle');
+  bootDone=true;
+  clearInterval(rainInterval); rainInterval=null; // já cumpriu o papel no boot; rodar pra sempre só gasta CPU à toa
+  showcaseLoop();
+
+  setTimeout(async()=>{
+    const v=await checkAPI();
+    addMsg('system',v?'HERMES ONLINE -- CONNECTION ESTABLISHED :9119':'WARNING: :9119 UNREACHABLE -- DEMO MODE. RUN: HERMES GATEWAY RESTART');
+  },600);
+}
+
+// ══════════════════════════════
+// NARRATIVA DE EVENTOS — painel único que troca de "cena" sincronizado com o estado.
+// Cada cena = o que a Hermes está fazendo agora, mostrado como se fosse uma aba/log real.
+// ══════════════════════════════
+const SCENES = {
+  listening: { title:'[ INBOX ]', lines:['CHECKING NEW MESSAGES...','3 UNREAD'], cursor:true },
+  thinking:  { title:'[ THINKING ]', lines:['>> WORKING ON THIS FOR YOU'], cursor:true },
+  focus_mail:{ title:'[ SENDING_MAIL ]', lines:['TO: operador@hermes.local','SUBJECT: RE: STATUS UPDATE'], progress:true },
+  focus_chat:{ title:'[ PROCESSING REQUEST ]', log:['[INFO] parsing operator query...','[INFO] generating response...'] },
+  success1:  { title:'[ TASK COMPLETE ]', lines:['>> EMAIL SENT. ✓'] },
+  focus_bkp: { title:'[ RUN: backup_routine.py ]', log:['[INFO] mounting volume...','[INFO] compressing 412 files...','[OK] backup saved'] },
+  success2:  { title:'[ TASK COMPLETE ]', lines:['>> BACKUP FINISHED. ✓'] },
+  surprise:  { title:'[ ALERT ]', lines:['>> INCOMING REQUEST','PRIORITY: HIGH'], alert:true },
+  confusion: { title:'[ PARSER ]', lines:['AMBIGUOUS INPUT DETECTED','RETRYING TOKENIZATION...'] },
+  skeptical: { title:'[ CONFIRM? ]', lines:['>> DID YOU MEAN:','"RESTART GATEWAY"?'] },
+  agree:     { title:'[ CONFIRMED ]', lines:['>> PROCEEDING...'] },
+  focus_rst: { title:'[ EXEC: gateway_restart.sh ]', log:['[INFO] stopping services...','[INFO] restarting WA+TG gateway...','[INFO] re-handshaking...'] },
+  error:     { title:'[ ERROR ]', lines:['[ERR] CONNECTION LOST :9119','[ERR] RETRY 1/3...'], alert:true, corrupt:true },
+  sad:       { title:'[ RECOVERING ]', lines:['>> ATTEMPTING RECOVERY...'] },
+};
+
+let corruptTimer=null;
+function showScene(key){
+  const card=document.getElementById('agent-card');
+  const panel=document.getElementById('scene-card');
+  const sc=key?SCENES[key]:null;
+  clearInterval(corruptTimer); corruptTimer=null;
+
+  if(!sc){ panel.style.display='none'; card.style.display='block'; return; }
+  card.style.display='none'; panel.style.display='block';
+  panel.classList.toggle('alert', !!sc.alert);
+  document.getElementById('scene-title').textContent=sc.title;
+  const body=document.getElementById('scene-body');
+  body.innerHTML='';
+
+  (sc.lines||[]).forEach((l,i)=>{
+    const d=document.createElement('div'); d.className='scene-line';
+    d.style.animationDelay=(i*0.15)+'s';
+    d.textContent=l; body.appendChild(d);
+  });
+
+  if(sc.log){
+    sc.log.forEach((l,i)=>{
+      setTimeout(()=>{
+        if(document.getElementById('scene-title').textContent!==sc.title) return;
+        const d=document.createElement('div'); d.className='scene-line log';
+        d.textContent=l; body.appendChild(d);
+      }, 350+i*650);
+    });
+  }
+
+  if(sc.progress){
+    const track=document.createElement('div'); track.className='scene-progress-track';
+    const fill=document.createElement('div'); fill.className='scene-progress-fill';
+    fill.style.transitionDuration='3.6s';
+    track.appendChild(fill); body.appendChild(track);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ fill.style.width='100%'; }));
+  }
+
+  if(sc.cursor){
+    const c=document.createElement('span'); c.className='scene-cursor'; c.textContent='_';
+    body.appendChild(c);
+  }
+
+  if(sc.corrupt){
+    const glyphs='!@#$%&*X0Z#&¥¤§'.split('');
+    corruptTimer=setInterval(()=>{
+      const lines=body.querySelectorAll('.scene-line');
+      if(!lines.length) return;
+      const ln=lines[Math.floor(Math.random()*lines.length)];
+      const txt=ln.textContent.split('');
+      const idx=Math.floor(Math.random()*txt.length);
+      txt[idx]=glyphs[Math.floor(Math.random()*glyphs.length)];
+      ln.textContent=txt.join('');
+    },120);
+  }
+}
+window.showScene = showScene;
+
+// ── Idle micro-variações: pisca de olhos e estática variando, pra não parecer travado ──
+setInterval(()=>{
+  if(hState==='idle' && bootDone && Math.random()<0.3){
+    setExpression('girl-closed');
+    setTimeout(()=>{ if(hState==='idle') setExpression('hermes-girl'); },160);
+  }
+},9000+Math.random()*6000);
+
+// ── Demo runner: sequência narrativa completa, uma cena de cada vez, tempo calibrado pra leitura ──
+async function runDemo(){
+  setHermesState('idle');      showScene(null);          await sleep(2400);
+
+  setHermesState('listening'); showScene('listening');
+  addMsg('system','SCANNING INBOX — 3 NEW MESSAGES');                          await sleep(3000);
+
+  setHermesState('thinking');  showScene('thinking');
+  addMsg('hermes','Let me check that for you.');                              await sleep(2600);
+
+  setHermesState('focus');     showScene('focus_mail');
+  addMsg('system','DRAFTING REPLY — SENDING TO OPERATOR...');                 await sleep(5200);
+
+  setHermesState('success');   showScene('success1');
+  addMsg('system','EMAIL SENT SUCCESSFULLY ✓');                               await sleep(2800);
+
+  setHermesState('idle');      showScene(null);          await sleep(2000);
+
+  setHermesState('focus');     showScene('focus_bkp');
+  addMsg('system','RUNNING SCHEDULED BACKUP (backup_routine.py)');            await sleep(5600);
+
+  setHermesState('success');   showScene('success2');
+  addMsg('system','BACKUP COMPLETE ✓');                                       await sleep(2800);
+
+  setHermesState('idle');      showScene(null);          await sleep(2000);
+
+  setHermesState('surprise');  showScene('surprise');
+  addMsg('system','⚠ INCOMING PRIORITY REQUEST');                            await sleep(2600);
+
+  setHermesState('confusion'); showScene('confusion');
+  addMsg('system','INPUT AMBIGUOUS — RETRYING PARSE...');                     await sleep(3600);
+
+  setHermesState('skeptical'); showScene('skeptical');
+  addMsg('hermes','Did you mean: "restart gateway"?');                        await sleep(3200);
+
+  setHermesState('agree');     showScene('agree');
+  addMsg('system','CONFIRMED BY OPERATOR — PROCEEDING');                      await sleep(2400);
+
+  setHermesState('focus');     showScene('focus_rst');
+  addMsg('system','EXECUTING gateway_restart.sh');                            await sleep(5400);
+
+  setHermesState('error');     showScene('error');
+  addMsg('system','ERROR: CONNECTION LOST :9119');                            await sleep(4200);
+
+  setHermesState('sad');       showScene('sad');
+  addMsg('system','ATTEMPTING AUTOMATIC RECOVERY...');                        await sleep(3000);
+
+  setHermesState('idle');      showScene(null);
+  addMsg('system','SYSTEM STABLE — AWAITING INPUT');                          await sleep(2800);
+}
+window.runDemo = runDemo;
+
+// ── Loop automático: o roteiro toca sozinho em repeat sem precisar digitar nada.
+// Pausa se o operador estiver de fato interagindo com o chat. ──
+let userActive=false, userActiveTimer=null;
+function markUserActive(){
+  userActive=true;
+  clearTimeout(userActiveTimer);
+  userActiveTimer=setTimeout(()=>{ userActive=false; },20000);
+}
+window.markUserActive = markUserActive;
+
+async function showcaseLoop(){
+  while(true){
+    if(!userActive && bootDone){
+      await runDemo();
+      await sleep(4000);
+    } else {
+      await sleep(2000);
+    }
+  }
+}
+
+
+function uptime(){
+  const s=Math.floor((Date.now()-t0)/1000);
+  return[Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,'0')).join(':');
+}
+function tick(){
+  const now=new Date(),t=now.toTimeString().slice(0,8);
+  document.getElementById('ft').textContent=t;
+  document.getElementById('h-dt').textContent=now.toLocaleDateString('pt-BR')+' '+t;
+  document.getElementById('h-cpu').textContent=(Math.random()*35+8).toFixed(0)+'%';
+  document.getElementById('h-mem').textContent=(Math.random()*25+55).toFixed(0)+'%';
+  document.getElementById('h-ses').textContent=SID;
+  document.getElementById('s-up').textContent=uptime();
+  document.getElementById('s-ti').textContent=tIn;
+  document.getElementById('s-to').textContent=tOut;
+  document.getElementById('s-ms').textContent=msgs;
+}
+setInterval(tick,1000);tick();
+
+async function checkAPI(){
+  for(const p of['/health','/']){
+    try{const r=await fetch(API+p,{signal:AbortSignal.timeout(2000),method:p==='/'?'HEAD':'GET'});
+    if(r.ok||r.status<500){setOn(true);return true;}}catch{}
+  }
+  setOn(false);return false;
+}
+function setOn(v){
+  online=v;
+  const d=document.getElementById('sdot'),s=document.getElementById('sstat'),
+        st=document.getElementById('s-st'),cc=document.getElementById('cc');
+  if(v){d.className='sdot';s.textContent='API ONLINE :9119';st.textContent='ONLINE';st.className='bv g';cc.textContent='CONNECTED';cc.style.color='var(--g)';}
+  else{d.className='sdot am';s.textContent='OFFLINE - DEMO MODE';st.textContent='DEMO';st.className='bv oo';cc.textContent='DEMO MODE';cc.style.color='var(--o)';}
+}
+setInterval(checkAPI,10000);
+
+// Estática/ruído de TV + bolhas subindo no líquido do jarro
+const HSC = document.getElementById('heart-static-canvas');
+if(HSC){
+  const hctx = HSC.getContext('2d');
+  function resizeHSC(){
+    const p = HSC.parentElement;
+    HSC.width = p.clientWidth;
+    HSC.height = p.clientHeight;
+  }
+  resizeHSC();
+  window.addEventListener('resize', resizeHSC);
+
+  // Bolhas: nascem na base do jarro (líquido), sobem até perto do topo
+  // Área aproximada do líquido dentro do jarro (baseado na imagem de referência):
+  // jarro ocupa ~ x:35%-78%, y:18%-92% da imagem; líquido começa em y:~24%
+  let bubbles = [];
+  function spawnBubble(){
+    bubbles.push({
+      x: 0.38 + Math.random()*0.36,   // dentro da largura do jarro
+      y: 0.90,                         // nasce perto do fundo
+      r: 1 + Math.random()*2.5,
+      speed: 0.0015 + Math.random()*0.002,
+      wobble: Math.random()*Math.PI*2,
+      alpha: 0.5 + Math.random()*0.4
+    });
+  }
+  let bubbleAcc=0;
+  function bubbleSpawnTick(dt){
+    bubbleAcc+=dt;
+    if(bubbleAcc>=hCur.bubRate){ bubbleAcc=0; spawnBubble(); }
+  }
+  setInterval(()=>bubbleSpawnTick(IS_MOBILE?80:45), IS_MOBILE?80:45);
+
+  function drawStatic(){
+    const W = HSC.width, H = HSC.height;
+
+    // ruído CRT visível — no mobile, pula pixels (passo 2) pra cortar o custo do loop pela metade
+    const imgData = hctx.createImageData(W, H);
+    const buf = imgData.data;
+    const step = IS_MOBILE ? 8 : 4; // 4=todo pixel, 8=um sim um não
+    for(let i=0; i<buf.length; i+=step){
+      const v = Math.random()*255;
+      buf[i]=v; buf[i+1]=v*0.55; buf[i+2]=0; buf[i+3]=Math.random()*38;
+    }
+    hctx.putImageData(imgData, 0, 0);
+
+    // scanlines fixas (linhas finas horizontais constantes)
+    hctx.fillStyle = 'rgba(0,0,0,0.12)';
+    for(let y=0; y<H; y+=3){ hctx.fillRect(0,y,W,1); }
+
+    // scanline brilhante móvel (estilo TV ligando)
+    const sy = (Date.now()/9) % H;
+    const slg = hctx.createLinearGradient(0,sy-10,0,sy+10);
+    slg.addColorStop(0,'rgba(255,210,0,0)');
+    slg.addColorStop(0.5,'rgba(255,210,0,0.13)');
+    slg.addColorStop(1,'rgba(255,210,0,0)');
+    hctx.fillStyle = slg;
+    hctx.fillRect(0,sy-10,W,20);
+
+    // bolhas subindo
+    bubbles.forEach(b=>{
+      b.y -= b.speed * (typeof hCur!=='undefined'?hCur.bubSpd:1);
+      b.wobble += 0.08;
+      const bx = (b.x + Math.sin(b.wobble)*0.01) * W;
+      const by = b.y * H;
+      hctx.beginPath();
+      hctx.arc(bx, by, b.r, 0, Math.PI*2);
+      hctx.strokeStyle = `rgba(255,200,80,${b.alpha * Math.min(1, b.y*2)})`;
+      hctx.lineWidth = 1;
+      hctx.stroke();
+      // pequeno highlight
+      hctx.beginPath();
+      hctx.arc(bx-b.r*0.3, by-b.r*0.3, b.r*0.3, 0, Math.PI*2);
+      hctx.fillStyle = `rgba(255,230,150,${b.alpha*0.5})`;
+      hctx.fill();
+    });
+    bubbles = bubbles.filter(b => b.y > 0.20); // remove ao chegar perto do topo do líquido
+
+    // vinheta sutil pra fundir com a borda
+    const vg = hctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3,W/2,H/2,Math.max(W,H)*0.7);
+    vg.addColorStop(0,'rgba(0,0,0,0)');
+    vg.addColorStop(1,'rgba(0,0,0,0.25)');
+    hctx.fillStyle = vg;
+    hctx.fillRect(0,0,W,H);
+  }
+  setInterval(drawStatic, IS_MOBILE?90:45);
+}
+
+// ECG de batimento cardíaco real, abaixo do bpanel
+const EHC = document.getElementById('ecg-heart-canvas');
+if(EHC){
+  function resizeEHC(){
+    const rect = EHC.getBoundingClientRect();
+    EHC.width = rect.width;
+    EHC.height = rect.height;
+  }
+  resizeEHC();
+  window.addEventListener('resize', resizeEHC);
+
+  const ehx = EHC.getContext('2d');
+  let ehData = null, ehPhase = 0;
+
+  function ecgHeartTick(){
+    const W = EHC.width, H = EHC.height;
+    const mid = H/2;
+    if(!ehData || ehData.length !== W) ehData = new Array(W).fill(mid);
+
+    if(Date.now()<flatlineUntil){
+      ehPhase+=0.002;
+      ehData.push(mid+(Math.random()-0.5)*1.5); ehData.shift();
+      ehx.clearRect(0,0,W,H);
+      ehx.beginPath();
+      ehx.strokeStyle='#FF8C00'; ehx.shadowColor='#FF8C00'; ehx.shadowBlur=4; ehx.lineWidth=1.5;
+      ehData.forEach((v,i)=> i===0?ehx.moveTo(i,v):ehx.lineTo(i,v));
+      ehx.stroke();
+      return;
+    }
+    ehPhase += 0.1 * (typeof hCur!=='undefined'?hCur.ecgSpd:1);
+    const p = ehPhase % (Math.PI*2);
+    let y = mid;
+    if(p<0.08) y = mid - Math.sin(p*40)*(H*0.38);
+    else if(p<0.18) y = mid + Math.sin((p-0.08)*30)*(H*0.12);
+    else if(p<0.28) y = mid - Math.sin((p-0.18)*30)*(H*0.7);
+    else if(p<0.45) y = mid + Math.sin((p-0.28)*18)*(H*0.15);
+    else y = mid + (Math.random()-0.5)*(H*0.04);
+
+    ehData.push(y); ehData.shift();
+
+    ehx.clearRect(0,0,W,H);
+    ehx.beginPath();
+    ehx.strokeStyle = '#FF8C00';
+    ehx.shadowColor = '#FF8C00';
+    ehx.shadowBlur = 4;
+    ehx.lineWidth = 1.5;
+    ehData.forEach((v,i)=> i===0 ? ehx.moveTo(i,v) : ehx.lineTo(i,v));
+    ehx.stroke();
+  }
+  setInterval(ecgHeartTick, IS_MOBILE?45:25);
+}
+
+// Coração agora é imagem real com pulso via CSS (ver @keyframes heartpulse)
+
+// ECG pixelado no espaço livre abaixo do agent card
+const EC=document.getElementById('ecg-canvas');
+if(EC){
+  const ex=EC.getContext('2d');
+  ex.imageSmoothingEnabled=false;
+  const ed=new Array(300).fill(20);let ep=0;
+  function ecgTick(){
+    ep+=0.11;const p=ep%(Math.PI*2);let y=20;
+    if(p<0.08)y=20-Math.sin(p*40)*16;
+    else if(p<0.18)y=20+Math.sin((p-0.08)*30)*5;
+    else if(p<0.28)y=20-Math.sin((p-0.18)*30)*30;
+    else if(p<0.45)y=20+Math.sin((p-0.28)*18)*6;
+    else y=20+(Math.random()-0.5)*1.5;
+    y=Math.round(y);
+    ed.push(y);ed.shift();
+    ex.clearRect(0,0,300,40);
+    ex.fillStyle='#FF8C00';
+    ed.forEach((v,i)=>{ ex.fillRect(i,v,1,2); });
+  }
+  setInterval(ecgTick, IS_MOBILE?50:28);
+}
+
+// atualiza ID secundário no painel da menina
+setInterval(()=>{
+  const el2=document.getElementById('aid-2');
+  if(el2) el2.textContent='HERMES-'+SID;
+},1000);
+// Input stream e ECG canvas removidos no layout fiel ao esqueleto de referência
+
+// ══════════════════════════════
+// MENINA — HERMES ENTITY (imagem real + efeitos glitch/scanline)
+// ══════════════════════════════
+const girlImg = document.getElementById('girl-img');
+const FXC = document.getElementById('girl-fx-canvas');
+const fx = FXC.getContext('2d');
+
+function resizeGirlFX(){
+  const p = FXC.parentElement;
+  FXC.width = p.clientWidth;
+  FXC.height = p.clientHeight;
+}
+resizeGirlFX();
+window.addEventListener('resize', resizeGirlFX);
+
+let gPhase=0, glitching=false, gtimer=0, scanY=0;
+
+function drawGirlFX(){
+  gPhase+=0.02; gtimer++;
+  const inTransition = Date.now()<transitionBurstUntil;
+
+  const gThresh=(110+Math.random()*100)/(typeof hCur!=='undefined'?hCur.glitch:1);
+  if(gtimer>gThresh){
+    glitching=true; gtimer=0;
+    setTimeout(()=>glitching=false,140+Math.random()*220);
+  }
+  // burst de transição força o glitch a aparecer junto com a troca de expressão
+  if(inTransition) glitching=true;
+
+  const W=FXC.width, H=FXC.height;
+  fx.clearRect(0,0,W,H);
+
+  // ruído denso extra durante a transição — reforça a sensação de "dado mudando"
+  if(inTransition){
+    const imgData = fx.createImageData(W, H);
+    const buf = imgData.data;
+    for(let i=0; i<buf.length; i+=4){
+      const v = Math.random()*255;
+      buf[i]=v; buf[i+1]=v*0.55; buf[i+2]=0; buf[i+3]=Math.random()*70;
+    }
+    fx.putImageData(imgData, 0, 0);
+  }
+
+  // CRT scanlines finas
+  for(let sy=0; sy<H; sy+=3){
+    fx.fillStyle='rgba(0,0,0,0.10)';
+    fx.fillRect(0,sy,W,1);
+  }
+
+  // scanline brilhante descendo
+  scanY=(scanY+0.7)%H;
+  const slGrad = fx.createLinearGradient(0,scanY-8,0,scanY+8);
+  slGrad.addColorStop(0,'rgba(255,200,0,0)');
+  slGrad.addColorStop(0.5,'rgba(255,200,0,0.10)');
+  slGrad.addColorStop(1,'rgba(255,200,0,0)');
+  fx.fillStyle=slGrad;
+  fx.fillRect(0,scanY-8,W,16);
+
+  // glitch burst: barras horizontais deslocadas com chroma split
+  if(glitching){
+    const bands = (inTransition?4:2) + Math.floor(Math.random()*3);
+    for(let b=0; b<bands; b++){
+      const by = Math.random()*H;
+      const bh = (inTransition?8:4) + Math.random()*18;
+      const xOff = (Math.random()-0.5)*(inTransition?28:16);
+
+      // chroma offset tint (simulado com retângulos coloridos translúcidos)
+      fx.fillStyle = `rgba(255,0,150,${inTransition?0.18:0.10})`;
+      fx.fillRect(xOff+2, by, W, bh);
+      fx.fillStyle = `rgba(0,229,255,${inTransition?0.18:0.10})`;
+      fx.fillRect(xOff-2, by, W, bh);
+
+      // banda de "corte" escura
+      fx.fillStyle = 'rgba(0,0,0,0.25)';
+      fx.fillRect(0, by, W, 1.5);
+    }
+
+    // flicker geral
+    fx.fillStyle = `rgba(255,140,0,${(inTransition?0.08:0.04)+Math.random()*0.05})`;
+    fx.fillRect(0,0,W,H);
+  }
+
+  // vinheta lateral preto
+  const vg = fx.createLinearGradient(0,0,W,0);
+  vg.addColorStop(0,'rgba(0,0,0,0.55)');
+  vg.addColorStop(0.12,'rgba(0,0,0,0)');
+  vg.addColorStop(0.88,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,0,0.55)');
+  fx.fillStyle=vg; fx.fillRect(0,0,W,H);
+
+  // vinheta topo/fundo
+  const vg2 = fx.createLinearGradient(0,0,0,H);
+  vg2.addColorStop(0,'rgba(0,0,0,0.5)');
+  vg2.addColorStop(0.15,'rgba(0,0,0,0)');
+  vg2.addColorStop(0.85,'rgba(0,0,0,0)');
+  vg2.addColorStop(1,'rgba(0,0,0,0.6)');
+  fx.fillStyle=vg2; fx.fillRect(0,0,W,H);
+
+  // tint laranja sutil constante (cola a imagem na paleta do terminal)
+  fx.fillStyle = `rgba(255,120,0,0.06)`;
+  fx.fillRect(0,0,W,H);
+
+  // label pulsante
+  fx.font = `7px 'Press Start 2P', monospace`;
+  fx.fillStyle = `rgba(255,200,0,${0.5+Math.sin(gPhase*1.5)*0.3})`;
+  fx.textAlign = 'center';
+  fx.shadowColor = '#FF8C00';
+  fx.shadowBlur = 6;
+  fx.fillText('// ENTITY ONLINE //', W/2, H-12);
+  fx.shadowBlur = 0;
+  fx.textAlign = 'left';
+
+  // glitch desloca a própria imagem via CSS transform ocasional
+  if(glitching && (inTransition || Math.random()<0.4)){
+    girlImg.style.transform = `translateX(${(Math.random()-0.5)*(inTransition?14:6)}px)`;
+    girlImg.style.filter = inTransition
+      ? 'contrast(1.5) saturate(1.6) hue-rotate(14deg)'
+      : 'contrast(1.3) saturate(1.4) hue-rotate(8deg)';
+  } else {
+    girlImg.style.transform = 'translateX(0)';
+    girlImg.style.filter = 'contrast(1.1) saturate(1.15)';
+  }
+}
+setInterval(drawGirlFX, IS_MOBILE?70:40);
+
+
+// CHAT
+const clog=document.getElementById('clog');
+const ci=document.getElementById('ci');
+const sb=document.getElementById('sb');
+const typ=document.getElementById('typ');
+
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+
+function addMsg(role,text){
+  const labels={user:'OPERATOR',hermes:'HERMES',system:'SYS'};
+  const t=new Date().toTimeString().slice(0,8);
+  const d=document.createElement('div');
+  d.className=`msg ${role}`;
+  d.innerHTML=`<div class="mh">[${t}] ${labels[role]||role.toUpperCase()}</div><div class="mb">${esc(text)}</div>`;
+  clog.appendChild(d);
+  while(clog.children.length>40) clog.removeChild(clog.firstChild);
+  clog.scrollTop=clog.scrollHeight;
+}
+
+async function send(){
+  const text=ci.value.trim();if(!text)return;
+  markUserActive();
+  ci.value='';ci.disabled=true;sb.disabled=true;
+  addMsg('user',text);msgs++;tIn+=Math.ceil(text.split(' ').length*1.3);
+  typ.style.display='block';
+  setHermesState('thinking'); showScene('thinking');
+  if(!online){
+    await new Promise(r=>setTimeout(r,500+Math.random()*400));
+    setHermesState('focus'); showScene('focus_chat');
+    await new Promise(r=>setTimeout(r,1400+Math.random()*700));
+    typ.style.display='none';
+    const demos=['COGNITIVE SYSTEM ACTIVE. API OFFLINE. RUN: HERMES GATEWAY RESTART',
+      'PERSISTENT MEMORY LOADED. WAITING FOR CONNECTION TO :9119',
+      'GATEWAY WA+TG ACTIVE. CONNECT DASHBOARD FOR FULL INTERACTION.',
+      'SKILLS: 68 LOADED. CRON JOBS: ACTIVE. DEMO MODE ENGAGED.'];
+    const r=demos[Math.floor(Math.random()*demos.length)];
+    addMsg('hermes',r);tOut+=Math.ceil(r.split(' ').length*1.3);
+    setHermesState('success'); showScene('success1');
+  }else{
+    try{
+      setHermesState('focus'); showScene('focus_chat');
+      let rt=null;
+      for(const[u,b]of[
+        [API+'/v1/chat/completions',JSON.stringify({messages:[{role:'user',content:text}],stream:false})],
+        [API+'/chat',JSON.stringify({message:text,session:SID})],
+        [API+'/api/chat',JSON.stringify({message:text})],
+      ]){
+        try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b,signal:AbortSignal.timeout(30000)});
+        if(r.ok){const d=await r.json();rt=d?.choices?.[0]?.message?.content||d?.response||d?.message||d?.content||d?.reply;if(rt)break;}}catch{}
+      }
+      typ.style.display='none';
+      if(rt){addMsg('hermes',rt);tOut+=Math.ceil(rt.split(' ').length*1.3);setHermesState('success');showScene('success1');}
+      else{addMsg('system','ERROR: UNKNOWN RESPONSE FORMAT');setHermesState('sad');showScene('sad');}
+    }catch(e){typ.style.display='none';addMsg('system','ERROR: '+e.message);setOn(false);setHermesState('error');showScene('error');}
+  }
+  ci.disabled=false;sb.disabled=false;ci.focus();
+  setTimeout(()=>{ if(hState==='success'||hState==='sad'){ setHermesState('idle'); showScene(null); } },2600);
+  setTimeout(()=>{ if(hState==='error'){ setHermesState('sad'); showScene('sad'); } },2200);
+}
+
+sb.addEventListener('click',send);
+ci.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+
+// ── liga listening enquanto o operador digita ──
+let listenTimer=null;
+ci.addEventListener('input',()=>{
+  if(!bootDone) return;
+  markUserActive();
+  if(hState==='idle') setHermesState('listening');
+  clearTimeout(listenTimer);
+  listenTimer=setTimeout(()=>{ if(hState==='listening') setHermesState('idle'); },1800);
+});
+
+bootSequence();
+</script>
+</body>
+</html>
